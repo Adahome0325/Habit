@@ -87,6 +87,41 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
 .grp.k .bar{background:var(--kid)}
 .grp .t{color:var(--muted);font-weight:600;font-size:11px}
 
+/* 清晰分区的"门户"区块 */
+.portal{border:1.5px solid var(--line);border-radius:18px;background:#fff;margin:16px 0;overflow:hidden;box-shadow:0 2px 10px rgba(16,24,40,.04)}
+.portal.me{border-color:#cdd9ff}
+.portal.kid{border-color:#ffd3b3}
+.portal.memo{border-color:#ffe0a3}
+.portal > .ph{display:flex;align-items:center;gap:10px;padding:15px 16px;font-size:18px;font-weight:800;letter-spacing:.5px}
+.portal.me > .ph{background:var(--me-bg);color:var(--me)}
+.portal.kid > .ph{background:var(--kid-bg);color:var(--kid)}
+.portal.memo > .ph{background:#fff6e3;color:#c47d10}
+.portal > .ph .ico{font-size:22px;line-height:1}
+.portal > .ph .t{margin-left:auto;font-size:11px;font-weight:700;opacity:.6;letter-spacing:1px}
+.portal > .pbody{padding:6px 14px 14px}
+.portal > .pbody .sub-line{font-size:12px;font-weight:600;color:var(--muted);padding:6px 1px 4px;letter-spacing:.3px}
+.portal > .pbody .sleepbox{margin-bottom:2px}
+
+/* 顶部切换 Tab */
+.tabs{display:flex;gap:8px;margin:4px 0 12px}
+.tab{flex:1;border:1.5px solid var(--line);background:#fff;color:var(--muted);font-weight:700;font-size:14px;padding:11px 6px;border-radius:13px;transition:.15s}
+.tab.on{color:#fff;border-color:transparent;box-shadow:0 3px 10px rgba(16,24,40,.12)}
+.tab[data-tab="me"].on{background:var(--me)}
+.tab[data-tab="kid"].on{background:var(--kid)}
+.portal.hide{display:none}
+
+/* 日历日记弹窗 */
+.day-sum{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.day-sum .chip{font-size:12px;font-weight:600;background:var(--ok-bg);color:#0f9b76;padding:4px 9px;border-radius:20px}
+.day-sum .muted{font-size:12px;color:var(--muted)}
+.modal-fld{margin-bottom:14px}
+.modal-fld label{display:block;font-size:13px;font-weight:700;margin-bottom:6px;color:var(--text)}
+.modal-fld input,.modal-fld textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px 12px;font-size:15px;background:#fbfcfe;font-family:inherit}
+.modal-fld textarea{min-height:150px;resize:vertical;line-height:1.6}
+.modal-fld input:focus,.modal-fld textarea:focus{outline:2px solid #cfd9ff;border-color:var(--me)}
+.primary{width:100%;padding:13px;border-radius:13px;font-size:15px;font-weight:700;color:#fff;background:var(--me);border:none}
+.primary:active{opacity:.9}
+
 .row{display:flex;align-items:center;gap:11px;padding:11px;border:1px solid var(--line);border-radius:13px;margin-bottom:8px;background:#fff;transition:.15s}
 .row.on{background:var(--ok-bg);border-color:#bfe9db}
 .row .ic{width:34px;height:34px;border-radius:10px;background:#f2f4f8;display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto}
@@ -248,16 +283,35 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
       <span class="tag" id="cloudTag" style="background:var(--ok-bg);color:#0f9b76;display:none">已保存</span>
     </div>
 
-    <div class="grp"><span class="bar"></span>我的 <span class="t">MY HABITS</span></div>
-    <div id="listMe"></div>
-    <div class="sleepbox" id="sleepMe"></div>
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-tab="me">👤 云云的自律星球</button>
+      <button class="tab" data-tab="kid">🧒 糯米团的小生活</button>
+    </div>
 
-    <div class="grp k"><span class="bar"></span>孩子 <span class="t">KID</span></div>
-    <div id="listKid"></div>
-    <div class="sleepbox kid" id="sleepKid"></div>
+    <div class="portal me" id="portalMe">
+      <div class="ph"><span class="ico">👤</span><span>云云的自律星球</span><span class="t">MY</span></div>
+      <div class="pbody">
+        <div class="sub-line">锻炼 · 阅读 · 睡眠</div>
+        <div id="listMe"></div>
+        <div class="sleepbox" id="sleepMe"></div>
+      </div>
+    </div>
 
-    <div class="grp"><span class="bar" style="background:var(--warn)"></span>今天做的有意义的事 <span class="t">MEMO</span></div>
-    <textarea class="bignote" id="dayNote" placeholder="记录一件今天值得记住的事…（会显示在日历里）"></textarea>
+    <div class="portal kid hide" id="portalKid">
+      <div class="ph"><span class="ico">🧒</span><span>糯米团的小生活</span><span class="t">KID</span></div>
+      <div class="pbody">
+        <div class="sub-line">英语 · 阅读 · 睡眠</div>
+        <div id="listKid"></div>
+        <div class="sleepbox kid" id="sleepKid"></div>
+      </div>
+    </div>
+
+    <div class="portal memo">
+      <div class="ph"><span class="ico">📝</span><span>今天做的有意义的事</span><span class="t">MEMO</span></div>
+      <div class="pbody">
+        <textarea class="bignote" id="dayNote" placeholder="记录一件今天值得记住的事…（会显示在日历里）"></textarea>
+      </div>
+    </div>
   </div>
 
   <div class="card">
@@ -278,6 +332,17 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
   </div>
 
   <div class="foot">数据先存在本机，开启云同步后手机电脑实时一致 · 记得定期导出备份</div>
+</div>
+
+<!-- 日历日记弹窗 -->
+<div class="mask" id="maskDay">
+  <div class="sheet">
+    <div class="sheet-h"><b id="dayTitle">日记</b><button class="iconbtn" data-close="maskDay">✕</button></div>
+    <div class="day-sum" id="daySum"></div>
+    <div class="modal-fld"><label>📍 今天去了哪里</label><input id="dayPlace" placeholder="例如：西湖、外婆家、图书馆、超市…"></div>
+    <div class="modal-fld"><label>✏️ 今天做了什么有意义的事</label><textarea id="dayJournal" placeholder="自由记录这一天——做了什么、见了谁、有什么感触…会显示在日历里"></textarea></div>
+    <button class="primary" id="daySave">保存</button>
+  </div>
 </div>
 
 <!-- 设置 -->
@@ -621,9 +686,9 @@ function renderCal(){
     if(d===selDate) cls += " sel";
     if(d>tstr) cls += " future";
     var day = getDay(d,false);
-    var hasNote = day && day.note && day.note.trim();
+    var hasJournal = day && ((day.note && day.note.trim()) || (day.place && day.place.trim()));
     html += '<div class="'+cls+'" data-cell="'+d+'">'
-      + (hasNote?'<span class="nmark"></span>':'')
+      + (hasJournal?'<span class="nmark"></span>':'')
       + '<div class="dd">'+i+'</div>'
       + '<div class="bar"><i style="width:'+Math.round(p.rate*100)+'%"></i></div>'
       + '</div>';
@@ -644,11 +709,48 @@ function renderCal(){
     if(names) sm.push("✅ "+names);
     if(sp.length) sm.push("😴 "+sp.join(" | "));
     rows += '<div class="mlrow" data-cell="'+ds+'"><div class="dt">'+(calMonth+1)+'/'+i+'</div><div class="tx">'
-      + (day.note && day.note.trim() ? esc(day.note) : '<span class="empty">（无备忘）</span>')
+      + (day.place && day.place.trim() ? '<b>📍 '+esc(day.place)+'</b> ' : '')
+      + (day.note && day.note.trim() ? esc(day.note) : (day.place && day.place.trim() ? '' : '<span class="empty">（无记录）</span>'))
       + (sm.length? '<div class="sm">'+esc(sm.join("　"))+'</div>' : '')
       + '</div></div>';
   }
   $("monthList").innerHTML = rows || '<div class="mlrow"><div class="tx"><span class="empty">本月还没有记录，点上面的日期开始打卡。</span></div></div>';
+}
+
+/* ============ 顶部 Tab 切换 ============ */
+function showTab(which){
+  document.querySelectorAll("#tabs .tab").forEach(function(b){
+    b.classList.toggle("on", b.getAttribute("data-tab")===which);
+  });
+  $("portalMe").classList.toggle("hide", which!=="me");
+  $("portalKid").classList.toggle("hide", which!=="kid");
+}
+
+/* ============ 日历日记弹窗 ============ */
+function openDayModal(d){
+  selDate = d;
+  var day = getDay(d,false) || {};
+  var dt = parseD(d);
+  $("dayTitle").textContent = d.replace(/-/g,"/") + "  " + "星期"+weekdayCN(dt);
+  $("dayPlace").value = day.place||"";
+  $("dayJournal").value = day.note||"";
+  var items = state.items.filter(function(it){return itemDone(day,it);}).map(function(it){return it.icon+" "+it.name;});
+  var s=[];
+  if(sleepDone(day.sleepMe)) s.push("😴 云云 "+ (day.sleepMe.asleep||day.sleepMe.off||"") +" 睡");
+  if(sleepDone(day.sleepKid)) s.push("🌙 糯米团 "+ (day.sleepKid.asleep||day.sleepKid.off||"") +" 睡");
+  var sum="";
+  if(items.length) sum += items.map(function(x){return '<span class="chip">'+esc(x)+'</span>';}).join("");
+  if(s.length) sum += s.map(function(x){return '<span class="chip">'+esc(x)+'</span>';}).join("");
+  $("daySum").innerHTML = sum || '<span class="muted">这一天还没打卡</span>';
+  $("maskDay").classList.add("show");
+  setTimeout(function(){ try{$("dayPlace").focus();}catch(e){} },120);
+}
+function saveDayModal(){
+  var day=getDay(selDate,true);
+  day.place = $("dayPlace").value.trim();
+  day.note = $("dayJournal").value;
+  touch(selDate); renderCal();
+  $("maskDay").classList.remove("show");
 }
 
 /* ============ 事件 ============ */
@@ -659,10 +761,14 @@ function bind(){
   $("prevM").onclick=function(){ if(--calMonth<0){calMonth=11;calYear--;} renderCal(); renderStats(); };
   $("nextM").onclick=function(){ if(++calMonth>11){calMonth=0;calYear++;} renderCal(); };
 
+  document.querySelectorAll("#tabs .tab").forEach(function(b){
+    b.onclick=function(){ showTab(b.getAttribute("data-tab")); };
+  });
+  $("daySave").onclick=function(){ saveDayModal(); };
+
   document.addEventListener("click", function(e){
     var t=e.target.closest("[data-cell]");
-    if(t){ selDate=t.getAttribute("data-cell"); renderAll();
-      document.getElementById("panel").scrollIntoView({behavior:"smooth",block:"start"}); return; }
+    if(t){ openDayModal(t.getAttribute("data-cell")); return; }
 
     var c=e.target.closest("[data-chk]");
     if(c){
