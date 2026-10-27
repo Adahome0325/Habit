@@ -97,9 +97,20 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
 .portal.kid > .ph{background:var(--kid-bg);color:var(--kid)}
 .portal.memo > .ph{background:#fff6e3;color:#c47d10}
 .portal > .ph .ico{font-size:22px;line-height:1}
+/* 头像 */
+.av{width:40px;height:40px;border-radius:50%;overflow:hidden;background:#eaf0ff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto;box-shadow:0 0 0 2px #fff,0 1px 3px rgba(20,24,34,.14);margin-right:4px;transition:transform .12s}
+.av:active{transform:scale(.93)}
+.av span{font-size:21px;line-height:1}
+.av img{width:100%;height:100%;object-fit:cover;display:block}
+.portal.kid .av{background:#fff0e6}
 .portal > .ph .t{margin-left:auto;font-size:11px;font-weight:700;opacity:.6;letter-spacing:1px}
 .portal > .pbody{padding:6px 14px 14px}
 .portal > .pbody .sub-line{font-size:12px;font-weight:600;color:var(--muted);padding:6px 1px 4px;letter-spacing:.3px}
+.portal .pstat{margin:2px 0 12px}
+.portal .pstat .stat{padding:10px 6px;border-radius:12px}
+.portal .pstat .stat b{font-size:21px}
+.portal .pstat .streaks{margin-bottom:4px}
+.hinttag{font-style:normal;font-size:10px;background:#f0f2f6;color:var(--muted);border-radius:6px;padding:2px 6px;margin-left:6px;font-weight:500}
 .portal > .pbody .sleepbox{margin-bottom:2px}
 
 /* 顶部切换 Tab */
@@ -259,17 +270,6 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
 
 <div class="wrap">
 
-  <div class="statgrid">
-    <div class="stat fire"><b id="sStreak">0</b><span>全勤连续（天）</span></div>
-    <div class="stat cal"><b id="sMonth">0</b><span>本月有记录</span></div>
-    <div class="stat tot"><b id="sTotal">0</b><span>累计记录</span></div>
-  </div>
-
-  <div class="card">
-    <div class="card-t">🔥 连续天数 <span class="tag" style="background:#f0f2f6;color:var(--muted)">今日未打卡不会断</span></div>
-    <div class="streaks" id="streaks"></div>
-  </div>
-
   <div class="datenav">
     <button class="navbtn" id="prevDay">‹</button>
     <div class="d" id="curDate">—</div>
@@ -291,18 +291,30 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
     </div>
 
     <div class="portal me" id="portalMe">
-      <div class="ph"><span class="ico">👤</span><span>云云的自律星球</span><span class="t">MY</span></div>
+      <div class="ph"><div class="av" id="avMe" data-av="me" title="点击更换头像"><span>👤</span></div><span>云云的自律星球</span><span class="t">MY</span></div>
       <div class="pbody">
-        <div class="sub-line">锻炼 · 阅读 · 睡眠</div>
+        <div class="statgrid pstat">
+          <div class="stat fire"><b id="sStreakMe">0</b><span>全勤连续（天）</span></div>
+          <div class="stat cal"><b id="sMonthMe">0</b><span>本月有记录</span></div>
+          <div class="stat tot"><b id="sTotalMe">0</b><span>累计记录</span></div>
+        </div>
+        <div class="streaks" id="streaksMe"></div>
+        <div class="sub-line">锻炼 · 阅读 · 睡眠 <em class="hinttag">今日未打卡不会断</em></div>
         <div id="listMe"></div>
         <div class="sleepbox" id="sleepMe"></div>
       </div>
     </div>
 
     <div class="portal kid hide" id="portalKid">
-      <div class="ph"><span class="ico">🧒</span><span>糯米团的小生活</span><span class="t">KID</span></div>
+      <div class="ph"><div class="av" id="avKid" data-av="kid" title="点击更换头像"><span>🧒</span></div><span>糯米团的小生活</span><span class="t">KID</span></div>
       <div class="pbody">
-        <div class="sub-line">英语 · 阅读 · 睡眠</div>
+        <div class="statgrid pstat">
+          <div class="stat fire"><b id="sStreakKid">0</b><span>全勤连续（天）</span></div>
+          <div class="stat cal"><b id="sMonthKid">0</b><span>本月有记录</span></div>
+          <div class="stat tot"><b id="sTotalKid">0</b><span>累计记录</span></div>
+        </div>
+        <div class="streaks" id="streaksKid"></div>
+        <div class="sub-line">英语 · 阅读 · 睡眠 <em class="hinttag">今日未打卡不会断</em></div>
         <div id="listKid"></div>
         <div class="sleepbox kid" id="sleepKid"></div>
       </div>
@@ -437,6 +449,7 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
 </div>
 
 <div class="toast" id="toast"></div>
+<input type="file" id="avFile" accept="image/*" style="display:none">
 
 <script>
 (function(){
@@ -501,6 +514,7 @@ function load(){
   try{
     var raw = localStorage.getItem(KEY);
     if(raw){ var s=JSON.parse(raw); if(s&&s.days){ state=s; if(!state.items) state.items=clone(DEFAULT_ITEMS); } }
+  if(!state.avatars) state.avatars={};
   }catch(e){ console.warn("load fail",e); }
   try{
     var c = localStorage.getItem(CFGKEY);
@@ -532,6 +546,7 @@ function touch(d){ getDay(d,true).updatedAt = Date.now(); save(); scheduleSync()
 
 /* ============ 完成度 ============ */
 function itemDone(day, it){
+  if(!day || !day.items) return false;
   var rec = day.items[it.id];
   if(!rec) return false;
   if(it.type==="amount") return (rec.qty||0) > 0;
@@ -579,26 +594,52 @@ function longestOf(fn){
   return best;
 }
 
-/* ============ 渲染：统计 ============ */
+/* ============ 渲染：统计（按人分区） ============ */
+function groupAllDone(g){
+  return function(d){
+    var day=getDay(d,false); if(!day) return false;
+    var items=state.items.filter(function(it){return it.group===g;});
+    if(!items.length) return false;
+    for(var i=0;i<items.length;i++){ if(!itemDone(day,items[i])) return false; }
+    return sleepDone(g==="me"?day.sleepMe:day.sleepKid);
+  };
+}
+function groupHasAny(g){
+  return function(d){
+    var day=getDay(d,false); if(!day) return false;
+    if(sleepDone(g==="me"?day.sleepMe:day.sleepKid)) return true;
+    for(var k in day.items){
+      var rec=day.items[k];
+      if(!(rec&&(rec.on||rec.qty))) continue;
+      var it=null;
+      state.items.forEach(function(x){ if(x.id===k) it=x; });
+      if(it&&it.group===g) return true;
+    }
+    return false;
+  };
+}
 function renderStats(){
-  var allDone = function(d){ var p=dayProgress(d); return p.total>0 && p.done===p.total; };
-  $("sStreak").textContent = streakOf(allDone);
-  $("sMonth").textContent  = countInMonth(calYear==null? parseD(todayStr()).getFullYear():calYear,
-                                          calMonth==null? parseD(todayStr()).getMonth():calMonth, dayHasAny);
-  var tot=0; Object.keys(state.days).forEach(function(k){ if(dayHasAny(k)) tot++; });
-  $("sTotal").textContent = tot;
+  var now = parseD(todayStr());
+  var y = calYear==null ? now.getFullYear() : calYear;
+  var m = calMonth==null ? now.getMonth() : calMonth;
+  ["me","kid"].forEach(function(g){
+    var sx = g==="me" ? "Me" : "Kid";
+    var allDone = groupAllDone(g), hasAny = groupHasAny(g);
+    $("sStreak"+sx).textContent = streakOf(allDone);
+    $("sMonth"+sx).textContent  = countInMonth(y, m, hasAny);
+    var tot=0; Object.keys(state.days).forEach(function(k){ if(hasAny(k)) tot++; });
+    $("sTotal"+sx).textContent = tot;
 
-  var html="";
-  state.items.forEach(function(it){
-    var f=function(d){ var day=getDay(d,false); return day? itemDone(day,it):false; };
-    var n=streakOf(f);
-    html += '<div class="sk '+it.group+'"><div class="n">'+n+'</div><div class="l">'+esc(it.icon+" "+it.name)+'</div></div>';
+    var html="";
+    state.items.forEach(function(it){
+      if(it.group!==g) return;
+      var f=function(d){ var day=getDay(d,false); return day? itemDone(day,it):false; };
+      html += '<div class="sk '+it.group+'"><div class="n">'+streakOf(f)+'</div><div class="l">'+esc(it.icon+" "+it.name)+'</div></div>';
+    });
+    var fs=function(d){ var day=getDay(d,false); return day? sleepDone(g==="me"?day.sleepMe:day.sleepKid):false; };
+    html += '<div class="sk '+g+'"><div class="n">'+streakOf(fs)+'</div><div class="l">'+(g==="me"?"😴 我的睡眠":"🌙 孩子睡眠")+'</div></div>';
+    $("streaks"+sx).innerHTML = html;
   });
-  var fsm=function(d){ var day=getDay(d,false); return day? sleepDone(day.sleepMe):false; };
-  var fsk=function(d){ var day=getDay(d,false); return day? sleepDone(day.sleepKid):false; };
-  html += '<div class="sk me"><div class="n">'+streakOf(fsm)+'</div><div class="l">😴 我的睡眠</div></div>';
-  html += '<div class="sk kid"><div class="n">'+streakOf(fsk)+'</div><div class="l">🌙 孩子睡眠</div></div>';
-  $("streaks").innerHTML = html;
 }
 function countInMonth(y,m,fn){
   var n=0, d=new Date(y,m,1);
@@ -737,7 +778,7 @@ function showTab(which){
 /* ============ 日历日记弹窗 ============ */
 function openDayModal(d){
   selDate = d;
-  var day = getDay(d,false) || {};
+  var day = getDay(d,false) || {items:{}, sleepMe:{}, sleepKid:{}};
   var dt = parseD(d);
   $("dayTitle").textContent = d.replace(/-/g,"/") + "  " + "星期"+weekdayCN(dt);
   $("dayPlace").value = day.place||"";
@@ -761,6 +802,43 @@ function saveDayModal(){
   $("maskDay").classList.remove("show");
 }
 
+/* ============ 头像 ============ */
+function applyAvatar(key, data){
+  var el = $("av"+(key==="me"?"Me":"Kid"));
+  if(!el) return;
+  el.innerHTML = data ? '<img alt="头像" src="'+data+'">' : '<span>'+(key==="me"?"👤":"🧒")+'</span>';
+}
+function applyAvatars(){
+  var a = state.avatars || {};
+  applyAvatar("me", a.me); applyAvatar("kid", a.kid);
+}
+function openAv(key){
+  $("avFile").dataset.key = key;
+  $("avFile").click();
+}
+function setAvatar(key, file){
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(){
+    var img = new Image();
+    img.onload = function(){
+      var max=256, w=img.width, h=img.height;
+      if(w>h && w>max){ h = h*max/w; w = max; }
+      else if(h>max){ w = w*max/h; h = max; }
+      var cv=document.createElement("canvas"); cv.width=Math.round(w); cv.height=Math.round(h);
+      cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);
+      var data = cv.toDataURL("image/jpeg",0.82);
+      state.avatars = state.avatars||{}; state.avatars[key]=data;
+      save(); scheduleSync();
+      applyAvatar(key, data);
+      toast("头像已更新 ✓");
+    };
+    img.onerror = function(){ toast("图片读取失败，换一张试试"); };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 /* ============ 事件 ============ */
 function bind(){
   $("prevDay").onclick=function(){ selDate=addDays(selDate,-1); renderAll(); };
@@ -774,7 +852,19 @@ function bind(){
   });
   $("daySave").onclick=function(){ saveDayModal(); };
 
+  $("avMe").onclick=function(){ openAv("me"); };
+  $("avKid").onclick=function(){ openAv("kid"); };
+  $("avFile").onchange=function(){
+    var f = this.files && this.files[0];
+    var key = this.dataset.key;
+    if(f && key) setAvatar(key, f);
+    this.value="";
+  };
+
   document.addEventListener("click", function(e){
+    var m=e.target.closest(".mask");
+    if(m && e.target===m){ m.classList.remove("show"); return; }
+
     var t=e.target.closest("[data-cell]");
     if(t){ openDayModal(t.getAttribute("data-cell")); return; }
 
@@ -931,6 +1021,9 @@ function mergeState(local, remote){
     else out.days[k] = ((b.updatedAt||0) > (a.updatedAt||0)) ? b : a;
   });
   out.updatedAt = Math.max(local.updatedAt||0, remote.updatedAt||0);
+  var la=local.avatars||{}, ra=remote.avatars||{}, av={};
+  ["me","kid"].forEach(function(k){ av[k] = (ra[k] || la[k]) || null; });
+  out.avatars = av;
   return out;
 }
 var drivers = {
@@ -1213,6 +1306,7 @@ function boot(){
   if(qd || qm) { saveCfg(); if(qd) toast("已自动接入同步码 " + qd); }
 
   bind();
+  applyAvatars();
   var now=new Date(); calYear=now.getFullYear(); calMonth=now.getMonth();
   renderAll();
   setSyncDot(cfg.mode==="local" ? "off" : "on");
