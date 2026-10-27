@@ -138,11 +138,19 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
 .rv-card .k{font-size:12px;color:var(--muted);margin-top:4px}
 .rv-card.hl{background:#eef0fb;border-color:#d8def5}
 .rv-card.hl .v{color:#4a59b8}
+.rv-card.full{grid-column:1/-1}
+.rv-card.ok{background:#e7f7f0;border-color:#bfe9db}
+.rv-card.ok .v{color:#0f9b76}
+.rv-legend{display:flex;align-items:center;gap:14px;font-size:11px;color:var(--muted);margin-top:8px;padding-left:2px}
+.rv-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.rv-legend .g{background:linear-gradient(180deg,#7fd6b0,#27ae8f)}
+.rv-legend .b{background:linear-gradient(180deg,#9aa6e6,#6b7bd6)}
 /* 柱状图 */
 .chart{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 12px 8px}
 .chart .bars{display:flex;align-items:flex-end;gap:2px;height:120px;position:relative}
 .chart .bars .b{flex:1 1 0;min-width:2px;background:linear-gradient(180deg,#9aa6e6,#6b7bd6);border-radius:3px 3px 0 0;position:relative;transition:height .2s}
 .chart .bars .b.zero{background:#e9ecf5}
+.chart .bars .b.ok{background:linear-gradient(180deg,#7fd6b0,#27ae8f)}
 .chart .avg{position:absolute;left:0;right:0;border-top:1.5px dashed #e08a3c;height:0;pointer-events:none}
 .chart .avg b{position:absolute;right:4px;top:-18px;font-size:10px;color:#e08a3c;background:#fff;padding:0 4px;border-radius:6px}
 .chart .xlab{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:6px}
@@ -537,6 +545,7 @@ var SLEEP = [
   {id:"asleep", label:"实际睡着"},
   {id:"wake",   label:"起床时间"}
 ];
+var SLEEP_TARGET = {me:420, kid:540}; // 睡眠达标阈值（分钟）：云云 7h，团子 9h
 
 /* ============ 状态 ============ */
 var state = {items:clone(DEFAULT_ITEMS), days:{}, updatedAt:0, itemsUpdatedAt:0};
@@ -740,9 +749,10 @@ function renderReview(){
   // 该人物的习惯
   var items = state.items.filter(function(it){return it.group===g;});
   var sleepKey = g==="me" ? "sleepMe" : "sleepKid";
+  var target = SLEEP_TARGET[g]; // 达标阈值（分钟）
 
   // 睡眠数据
-  var durs=[], beds=[], wakes=[], falls=[], sleepDays=0;
+  var durs=[], beds=[], wakes=[], falls=[], sleepDays=0, passDays=0;
   days.forEach(function(d){
     var day=getDay(d,false);
     var sp = day ? day[sleepKey] : null;
@@ -750,7 +760,7 @@ function renderReview(){
       sleepDays++;
       var du=diffMin(sp.asleep, sp.wake);
       var bd=toMin(sp.bed), wk=toMin(sp.wake), fa=diffMin(sp.bed, sp.asleep);
-      if(du!=null) durs.push(du);
+      if(du!=null){ durs.push(du); if(du>=target) passDays++; }
       if(bd!=null){ if(bd<720) bd+=1440; beds.push(bd); }
       if(wk!=null) wakes.push(wk);
       if(fa!=null) falls.push(fa);
@@ -784,13 +794,16 @@ function renderReview(){
     var day=getDay(d,false);
     var sp = day ? day[sleepKey] : null;
     var du = (sp&&sleepDone(sp)) ? diffMin(sp.asleep, sp.wake) : null;
+    var ok = (du!=null && du>=target);
     var h = du==null?0:Math.max(3, Math.round(du/(maxDur||1)*100));
-    chartBars += '<div class="b'+(du==null?" zero":"")+'" style="height:'+h+'%" title="'+d+(du==null?"（无记录）":" · "+fmtDur(du))+'"></div>';
+    chartBars += '<div class="b'+(du==null?" zero":(ok?" ok":""))+'" style="height:'+h+'%" title="'+d+(du==null?"（无记录）":" · "+fmtDur(du)+(ok?" ✓达标":" ✗未达标"))+'"></div>';
   });
   var avgTop = (avgDur!=null && maxDur>0) ? Math.max(3, Math.round(avgDur/maxDur*100)) : 0;
+  var tgtH = target/60;
   var sleepChart = '<div class="chart'+(narrow?" narrow":"")+'"><div class="bars">'+chartBars
     + '<div class="avg" style="bottom:'+(avgTop)+'%"><b>均 '+fmtDur(avgDur)+'</b></div>'
-    + '</div><div class="xlab"><span>'+fromD.slice(5)+'</span><span>'+todayStr().slice(5)+'</span></div></div>';
+    + '</div><div class="xlab"><span>'+fromD.slice(5)+'</span><span>'+todayStr().slice(5)+'</span></div>'
+    + '<div class="rv-legend"><span><i class="g"></i>达标（≥'+tgtH+'h）</span><span><i class="b"></i>未达标</span><span>目标 '+tgtH+' 小时</span></div></div>';
 
   var durCard = avgDur==null ? "—" : fmtDur(avgDur);
   var bedCard = avgBed==null ? "—" : fmtMin(avgBed);
@@ -805,6 +818,7 @@ function renderReview(){
       + '<div class="rv-card"><div class="v">'+wakeCard+'</div><div class="k">平均起床</div></div>'
       + '<div class="rv-card"><div class="v">'+fallCard+'</div><div class="k">平均入睡耗时</div></div>'
     + '</div>'
+    + '<div class="rv-card ok full"><div class="v">'+ (sleepDays? Math.round(passDays/sleepDays*100):0) +'% <small>达标</small></div><div class="k">🎯 睡眠达标 '+passDays+' / '+sleepDays+' 天 · 目标 '+(g==="me"?"7":"9")+' 小时</div></div>'
     + '<div class="rv-block">'+sleepChart+'</div>'
     + '<div class="rv-h">📈 习惯完成情况 <span class="tag">'+ (g==="me"?"云云":"糯米团") +'</span></div>'
     + (items.length? '<div class="rv-block">'+habitRows+'</div>'
