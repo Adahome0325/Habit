@@ -130,6 +130,10 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
 .modal-fld input,.modal-fld textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px 12px;font-size:15px;background:#fbfcfe;font-family:inherit}
 .modal-fld textarea{min-height:150px;resize:vertical;line-height:1.6}
 .modal-fld input:focus,.modal-fld textarea:focus{outline:2px solid #cfd9ff;border-color:var(--me)}
+.day-parts{display:flex;flex-direction:column;gap:10px}
+.dp{display:flex;flex-direction:column;gap:4px}
+.dp-t{font-size:12px;font-weight:700;color:var(--me)}
+.dp textarea{min-height:64px;resize:vertical;line-height:1.6}
 .primary{width:100%;padding:13px;border-radius:13px;font-size:15px;font-weight:700;color:#fff;background:var(--me);border:none}
 .primary:active{opacity:.9}
 
@@ -180,6 +184,11 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
 .memoview{min-height:24px;font-size:15px;line-height:1.6;color:#2a2f3a}
 .memoview .mv-place{font-weight:700;color:#c47d10;margin-bottom:4px}
 .memoview .mv-note{color:#3a3f4a;white-space:pre-wrap}
+.memoview .mv-part{margin-top:4px}
+.memoview .mv-part b{display:inline-block;margin-right:6px;color:#7a8290;font-weight:700}
+.memoview .mv-part span{color:#3a3f4a;white-space:pre-wrap}
+.mlrow .tx .mv-part{margin-top:2px}
+.mlrow .tx .mv-part b{display:inline-block;margin-right:6px;color:#7a8290;font-weight:700}
 .memohint{margin-top:8px;font-size:12px;color:var(--muted);opacity:.8}
 
 /* ---------- calendar ---------- */
@@ -355,7 +364,7 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
     <div class="sheet-h"><b id="dayTitle">日记</b><button class="iconbtn" data-close="maskDay">✕</button></div>
     <div class="day-sum" id="daySum"></div>
     <div class="modal-fld"><label>📍 今天去了哪里</label><input id="dayPlace" placeholder="例如：西湖、外婆家、图书馆、超市…"></div>
-    <div class="modal-fld"><label>✏️ 今天做了什么有意义的事</label><textarea id="dayJournal" placeholder="自由记录这一天——做了什么、见了谁、有什么感触…会显示在日历里"></textarea></div>
+    <div class="modal-fld"><label>📝 这一天记录（按时间段填，方便以后回顾）</label><div class="day-parts"><div class="dp"><span class="dp-t">🌤️ 上午</span><textarea id="dayAm" placeholder="上午做了什么、去了哪…"></textarea></div><div class="dp"><span class="dp-t">☀️ 下午</span><textarea id="dayPm" placeholder="下午做了什么、见了谁…"></textarea></div><div class="dp"><span class="dp-t">🌙 晚上</span><textarea id="dayEve" placeholder="晚上做了什么、有什么感触…"></textarea></div></div></div>
     <button class="primary" id="daySave">保存</button>
   </div>
 </div>
@@ -568,7 +577,7 @@ function dayProgress(d){
 function dayHasAny(d){
   var day = getDay(d,false);
   if(!day) return false;
-  if(day.note && day.note.trim()) return true;
+  if((day.note&&day.note.trim())||(day.am&&day.am.trim())||(day.pm&&day.pm.trim())||(day.eve&&day.eve.trim())) return true;
   if(sleepDone(day.sleepMe)||sleepDone(day.sleepKid)) return true;
   for(var k in day.items){ if(day.items[k] && (day.items[k].on || day.items[k].qty)) return true; }
   return false;
@@ -667,7 +676,7 @@ function renderPanel(){
   // 今日备忘：只读展示，编辑走日历弹窗
   var mv = "";
   if(day.place && day.place.trim()) mv += '<div class="mv-place">📍 '+esc(day.place)+'</div>';
-  if(day.note && day.note.trim())  mv += '<div class="mv-note">'+esc(day.note).replace(/\n/g,"<br>")+'</div>';
+  mv += partsHTML(day);
   if(!mv) mv = '<span class="empty">还没有记录，点日历上这一天添加 ✍️</span>';
   $("dayMemoView").innerHTML = mv;
 }
@@ -735,7 +744,7 @@ function renderCal(){
     if(d===selDate) cls += " sel";
     if(d>tstr) cls += " future";
     var day = getDay(d,false);
-    var hasJournal = day && ((day.note && day.note.trim()) || (day.place && day.place.trim()));
+    var hasJournal = day && ((day.note && day.note.trim()) || (day.place && day.place.trim()) || (day.am && day.am.trim()) || (day.pm && day.pm.trim()) || (day.eve && day.eve.trim()));
     html += '<div class="'+cls+'" data-cell="'+d+'">'
       + (hasJournal?'<span class="nmark"></span>':'')
       + '<div class="dd">'+i+'</div>'
@@ -757,9 +766,12 @@ function renderCal(){
     var sm = [];
     if(names) sm.push("✅ "+names);
     if(sp.length) sm.push("😴 "+sp.join(" | "));
+    var tx = "";
+    if(day.place && day.place.trim()) tx += '<b>📍 '+esc(day.place)+'</b> ';
+    tx += partsHTML(day);
+    if(!tx.trim()) tx = '<span class="empty">（无记录）</span>';
     rows += '<div class="mlrow" data-cell="'+ds+'"><div class="dt">'+(calMonth+1)+'/'+i+'</div><div class="tx">'
-      + (day.place && day.place.trim() ? '<b>📍 '+esc(day.place)+'</b> ' : '')
-      + (day.note && day.note.trim() ? esc(day.note) : (day.place && day.place.trim() ? '' : '<span class="empty">（无记录）</span>'))
+      + tx
       + (sm.length? '<div class="sm">'+esc(sm.join("　"))+'</div>' : '')
       + '</div></div>';
   }
@@ -776,13 +788,24 @@ function showTab(which){
 }
 
 /* ============ 日历日记弹窗 ============ */
+function partsHTML(day){
+  var segs=[];
+  if(day.am && day.am.trim())  segs.push('<div class="mv-part"><b>🌤️ 上午</b><span>'+esc(day.am).replace(/\n/g,"<br>")+'</span></div>');
+  if(day.pm && day.pm.trim())  segs.push('<div class="mv-part"><b>☀️ 下午</b><span>'+esc(day.pm).replace(/\n/g,"<br>")+'</span></div>');
+  if(day.eve && day.eve.trim())segs.push('<div class="mv-part"><b>🌙 晚上</b><span>'+esc(day.eve).replace(/\n/g,"<br>")+'</span></div>');
+  if(!segs.length && day.note && day.note.trim()) segs.push('<div class="mv-part"><span>'+esc(day.note).replace(/\n/g,"<br>")+'</span></div>');
+  return segs.join("");
+}
 function openDayModal(d){
   selDate = d;
   var day = getDay(d,false) || {items:{}, sleepMe:{}, sleepKid:{}};
   var dt = parseD(d);
   $("dayTitle").textContent = d.replace(/-/g,"/") + "  " + "星期"+weekdayCN(dt);
   $("dayPlace").value = day.place||"";
-  $("dayJournal").value = day.note||"";
+  var legacy = (!day.am && !day.pm && !day.eve && day.note) ? day.note : "";
+  $("dayAm").value  = day.am  || legacy || "";
+  $("dayPm").value  = day.pm  || "";
+  $("dayEve").value = day.eve || "";
   var items = state.items.filter(function(it){return itemDone(day,it);}).map(function(it){return it.icon+" "+it.name;});
   var s=[];
   if(sleepDone(day.sleepMe)) s.push("😴 云云 "+ (day.sleepMe.asleep||day.sleepMe.off||"") +" 睡");
@@ -797,7 +820,10 @@ function openDayModal(d){
 function saveDayModal(){
   var day=getDay(selDate,true);
   day.place = $("dayPlace").value.trim();
-  day.note = $("dayJournal").value;
+  day.am  = $("dayAm").value;
+  day.pm  = $("dayPm").value;
+  day.eve = $("dayEve").value;
+  if(day.am.trim()||day.pm.trim()||day.eve.trim()) day.note = "";  // 已拆分到时间段，避免重复展示
   touch(selDate); renderCal();
   $("maskDay").classList.remove("show");
 }
