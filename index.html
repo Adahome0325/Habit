@@ -166,8 +166,10 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
 .sleepcalc b{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
 
 /* ---------- note ---------- */
-.bignote{width:100%;min-height:74px;padding:11px;border:1px solid var(--line);border-radius:12px;resize:vertical;background:#fbfcfe;font-size:15px}
-.bignote:focus{outline:2px solid #cfd9ff}
+.memoview{min-height:24px;font-size:15px;line-height:1.6;color:#2a2f3a}
+.memoview .mv-place{font-weight:700;color:#c47d10;margin-bottom:4px}
+.memoview .mv-note{color:#3a3f4a;white-space:pre-wrap}
+.memohint{margin-top:8px;font-size:12px;color:var(--muted);opacity:.8}
 
 /* ---------- calendar ---------- */
 .calhead{display:flex;align-items:center;gap:10px;margin-bottom:12px}
@@ -309,7 +311,8 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
     <div class="portal memo">
       <div class="ph"><span class="ico">📝</span><span>今天做的有意义的事</span><span class="t">MEMO</span></div>
       <div class="pbody">
-        <textarea class="bignote" id="dayNote" placeholder="记录一件今天值得记住的事…（会显示在日历里）"></textarea>
+        <div id="dayMemoView" class="memoview"></div>
+        <div class="memohint">点日历上对应的日期，可记录「📍去了哪里 + ✏️做了什么有意义的事」</div>
       </div>
     </div>
   </div>
@@ -620,7 +623,12 @@ function renderPanel(){
   $("listKid").innerHTML = kid.map(function(it){return rowHTML(it, day);}).join("");
   $("sleepMe").innerHTML  = sleepHTML("me", day.sleepMe, "😴 我的睡眠记录");
   $("sleepKid").innerHTML = sleepHTML("kid", day.sleepKid, "🌙 孩子的睡眠记录");
-  $("dayNote").value = day.note || "";
+  // 今日备忘：只读展示，编辑走日历弹窗
+  var mv = "";
+  if(day.place && day.place.trim()) mv += '<div class="mv-place">📍 '+esc(day.place)+'</div>';
+  if(day.note && day.note.trim())  mv += '<div class="mv-note">'+esc(day.note).replace(/\n/g,"<br>")+'</div>';
+  if(!mv) mv = '<span class="empty">还没有记录，点日历上这一天添加 ✍️</span>';
+  $("dayMemoView").innerHTML = mv;
 }
 function rowHTML(it, day){
   var rec = day.items[it.id] || {};
@@ -820,9 +828,6 @@ function bind(){
       if(calc) calc.outerHTML = calcHTML(sp);
       renderStats();
       return;
-    }
-    if(e.target.id==="dayNote"){
-      var d4=getDay(selDate,true); d4.note=e.target.value; softTouch(); return;
     }
   });
 
