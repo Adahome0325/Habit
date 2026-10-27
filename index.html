@@ -392,10 +392,10 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
     </div>
 
     <div class="portal memo">
-      <div class="ph"><span class="ico">📝</span><span>今天做的有意义的事</span><span class="t">MEMO</span></div>
+      <div class="ph"><span class="ico">📝</span><span id="memoTitle">今天做的有意义的事</span><span class="t">MEMO</span></div>
       <div class="pbody">
         <div id="dayMemoView" class="memoview"></div>
-        <div class="memohint">点日历上对应的日期，可记录「📍去了哪里 + ✏️做了什么有意义的事」</div>
+        <div class="memohint">点日历上对应的日期，按时间段记录（云云：有意义的事；团子：孩子的变化）</div>
       </div>
     </div>
   </div>
@@ -424,9 +424,13 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
 <div class="mask" id="maskDay">
   <div class="sheet">
     <div class="sheet-h"><b id="dayTitle">日记</b><button class="iconbtn" data-close="maskDay">✕</button></div>
+    <div class="seg" id="dayWho" style="margin-bottom:12px">
+      <button class="sg on" data-who="me">👤 云云</button>
+      <button class="sg" data-who="kid">🧒 糯米团</button>
+    </div>
     <div class="day-sum" id="daySum"></div>
     <div class="modal-fld"><label>📍 今天去了哪里</label><input id="dayPlace" placeholder="例如：西湖、外婆家、图书馆、超市…"></div>
-    <div class="modal-fld"><label>📝 这一天记录（按时间段填，方便以后回顾）</label><div class="day-parts"><div class="dp"><span class="dp-t">🌤️ 上午</span><textarea id="dayAm" placeholder="上午做了什么、去了哪…"></textarea></div><div class="dp"><span class="dp-t">☀️ 下午</span><textarea id="dayPm" placeholder="下午做了什么、见了谁…"></textarea></div><div class="dp"><span class="dp-t">🌙 晚上</span><textarea id="dayEve" placeholder="晚上做了什么、有什么感触…"></textarea></div></div></div>
+    <div class="modal-fld"><label id="dayNoteLabel">📝 今天做的有意义的事（按时间段填）</label><div class="day-parts"><div class="dp"><span class="dp-t">🌤️ 上午</span><textarea id="dayAm" placeholder="上午做了什么、去了哪…"></textarea></div><div class="dp"><span class="dp-t">☀️ 下午</span><textarea id="dayPm" placeholder="下午做了什么、见了谁…"></textarea></div><div class="dp"><span class="dp-t">🌙 晚上</span><textarea id="dayEve" placeholder="晚上做了什么、有什么感触…"></textarea></div></div></div>
     <button class="primary" id="daySave">保存</button>
   </div>
 </div>
@@ -531,20 +535,21 @@ var KEY = "family-habit-tracker-v1";
 var CFGKEY = "family-habit-tracker-cfg-v1";
 
 var DEFAULT_ITEMS = [
-  {id:"exercise", name:"锻炼",      icon:"🏃", group:"me",  type:"check"},
-  {id:"reading",  name:"阅读",      icon:"📖", group:"me",  type:"check"},
+  {id:"exercise", name:"锻炼",      icon:"🏃", group:"me",  type:"amount", unit:"分钟", target:30},
+  {id:"reading",  name:"阅读",      icon:"📖", group:"me",  type:"amount", unit:"分钟", target:30},
   {id:"listening",name:"英语听力",  icon:"🎧", group:"kid", type:"amount", unit:"分钟", target:25},
   {id:"words",    name:"背单词",    icon:"🔤", group:"kid", type:"amount", unit:"个",   target:20},
   {id:"kidread",  name:"指读",      icon:"🗣️", group:"kid", type:"amount", unit:"分钟", target:30},
   {id:"laibei",   name:"来背",      icon:"📱", group:"kid", type:"check"}
 ];
 
-var SLEEP = [
-  {id:"bed",    label:"上床时间"},
-  {id:"off",    label:"关灯时间"},
-  {id:"asleep", label:"实际睡着"},
-  {id:"wake",   label:"起床时间"}
-];
+// 睡眠记录字段（分人）：云云只需关灯+起床；团子只需睡着+起床
+var SLEEP_FIELDS = {
+  me:  [{id:"off",    label:"关灯时间"},
+        {id:"wake",   label:"起床时间"}],
+  kid: [{id:"asleep", label:"睡着时间"},
+        {id:"wake",   label:"起床时间"}]
+};
 var SLEEP_TARGET = {me:420, kid:540}; // 睡眠达标阈值（分钟）：云云 7h，团子 9h
 
 /* ============ 状态 ============ */
@@ -552,6 +557,7 @@ var state = {items:clone(DEFAULT_ITEMS), days:{}, updatedAt:0, itemsUpdatedAt:0}
 var cfg = {mode:"local", deviceId:"", apiUrl:"", sbUrl:"", sbKey:"", binId:"", binKey:"", auto:true};
 var selDate = todayStr();
 var calYear, calMonth;
+var activePerson = "me", modalPerson = "me";
 var reviewWho = "me", reviewRange = "1";
 var syncState = "off";
 var pushTimer = null;
@@ -589,10 +595,33 @@ function load(){
     if(raw){ var s=JSON.parse(raw); if(s&&s.days){ state=s; if(!state.items) state.items=clone(DEFAULT_ITEMS); } }
   if(!state.avatars) state.avatars={};
   }catch(e){ console.warn("load fail",e); }
+  migrateState();
   try{
     var c = localStorage.getItem(CFGKEY);
     if(c){ var o=JSON.parse(c); for(var k in o) cfg[k]=o[k]; }
   }catch(e){}
+}
+function migrateState(){
+  // 锻炼 / 阅读 改为可记录时长（amount，单位分钟）
+  state.items.forEach(function(it){
+    if((it.id==="exercise"||it.id==="reading") && it.type!=="amount"){
+      it.type="amount"; it.unit="分钟"; it.target=30;
+    }
+  });
+  // 各天记录字段对齐 item 当前类型（check<->amount 互转数据）
+  Object.keys(state.days||{}).forEach(function(d){
+    var day=state.days[d]; if(!day.items) return;
+    state.items.forEach(function(it){
+      var rec=day.items[it.id]; if(!rec) return;
+      if(it.type==="amount"){
+        if(rec.on!==undefined && rec.qty===undefined) rec.qty = rec.on ? (it.target||1) : 0;
+        delete rec.on;
+      }else{
+        if(rec.qty!==undefined && rec.on===undefined) rec.on = rec.qty>0;
+        delete rec.qty;
+      }
+    });
+  });
 }
 function save(){
   state.updatedAt = Date.now();
@@ -607,13 +636,31 @@ function saveCfg(){ try{ localStorage.setItem(CFGKEY, JSON.stringify(cfg)); }cat
 function getDay(d, create){
   if(!state.days[d]){
     if(!create) return null;
-    state.days[d] = {items:{}, sleepMe:{}, sleepKid:{}, note:"", updatedAt:0};
+    state.days[d] = {items:{}, sleepMe:{}, sleepKid:{}, notes:{me:{am:"",pm:"",eve:"",place:""}, kid:{am:"",pm:"",eve:"",place:""}}, updatedAt:0};
   }
   var day = state.days[d];
   if(!day.items) day.items={};
   if(!day.sleepMe) day.sleepMe={};
   if(!day.sleepKid) day.sleepKid={};
+  if(!day.notes) day.notes={};
+  if(!day.notes.me) day.notes.me={am:"",pm:"",eve:"",place:""};
+  if(!day.notes.kid) day.notes.kid={am:"",pm:"",eve:"",place:""};
+  // 旧字段一次性迁移到按人备注
+  if(day.am!==undefined || day.pm!==undefined || day.eve!==undefined || day.place!==undefined || day.note!==undefined){
+    var nm = day.notes.me;
+    if(day.am!==undefined)    nm.am    = day.am||"";
+    if(day.pm!==undefined)    nm.pm    = day.pm||"";
+    if(day.eve!==undefined)   nm.eve   = day.eve||"";
+    if(day.place!==undefined) nm.place = day.place||"";
+    if(day.note && !nm.am)    nm.am    = day.note;
+    delete day.am; delete day.pm; delete day.eve; delete day.place; delete day.note;
+  }
   return day;
+}
+function noteOf(day, g){
+  if(!day.notes) day.notes={};
+  if(!day.notes[g]) day.notes[g]={am:"",pm:"",eve:"",place:""};
+  return day.notes[g];
 }
 function touch(d){ getDay(d,true).updatedAt = Date.now(); save(); scheduleSync(); }
 
@@ -638,10 +685,11 @@ function dayProgress(d){
   if(sleepDone(day.sleepKid)) done++;
   return {done:done, total:total, rate: total? done/total : 0};
 }
+function hasNote(n){ return !!(n && (n.am||n.pm||n.eve||n.place)); }
 function dayHasAny(d){
   var day = getDay(d,false);
   if(!day) return false;
-  if((day.note&&day.note.trim())||(day.am&&day.am.trim())||(day.pm&&day.pm.trim())||(day.eve&&day.eve.trim())) return true;
+  if(hasNote(day.notes&&day.notes.me) || hasNote(day.notes&&day.notes.kid)) return true;
   if(sleepDone(day.sleepMe)||sleepDone(day.sleepKid)) return true;
   for(var k in day.items){ if(day.items[k] && (day.items[k].on || day.items[k].qty)) return true; }
   return false;
@@ -751,22 +799,23 @@ function renderReview(){
   var sleepKey = g==="me" ? "sleepMe" : "sleepKid";
   var target = SLEEP_TARGET[g]; // 达标阈值（分钟）
 
-  // 睡眠数据
-  var durs=[], beds=[], wakes=[], falls=[], sleepDays=0, passDays=0;
+  // 睡眠数据（云云按 关灯→起床 算卧床时长；团子按 睡着→起床 算睡眠时长）
+  var durs=[], beds=[], wakes=[], sleepDays=0, passDays=0;
   days.forEach(function(d){
     var day=getDay(d,false);
     var sp = day ? day[sleepKey] : null;
     if(sp && sleepDone(sp)){
-      sleepDays++;
-      var du=diffMin(sp.asleep, sp.wake);
-      var bd=toMin(sp.bed), wk=toMin(sp.wake), fa=diffMin(sp.bed, sp.asleep);
-      if(du!=null){ durs.push(du); if(du>=target) passDays++; }
-      if(bd!=null){ if(bd<720) bd+=1440; beds.push(bd); }
-      if(wk!=null) wakes.push(wk);
-      if(fa!=null) falls.push(fa);
+      var du = g==="me" ? diffMin(sp.off, sp.wake) : diffMin(sp.asleep, sp.wake);
+      if(du!=null){
+        sleepDays++;
+        durs.push(du); if(du>=target) passDays++;
+        var bt = g==="me" ? toMin(sp.off) : toMin(sp.asleep);
+        if(bt!=null){ if(bt<720) bt+=1440; beds.push(bt); }
+        var wk = toMin(sp.wake); if(wk!=null) wakes.push(wk);
+      }
     }
   });
-  var avgDur=avgMinOf(durs), avgBed=avgMinOf(beds), avgWake=avgMinOf(wakes), avgFall=avgMinOf(falls);
+  var avgDur=avgMinOf(durs), avgBed=avgMinOf(beds), avgWake=avgMinOf(wakes);
 
   // 习惯完成情况
   var habitRows="";
@@ -793,7 +842,7 @@ function renderReview(){
   days.forEach(function(d){
     var day=getDay(d,false);
     var sp = day ? day[sleepKey] : null;
-    var du = (sp&&sleepDone(sp)) ? diffMin(sp.asleep, sp.wake) : null;
+    var du = (sp&&sleepDone(sp)) ? (g==="me"? diffMin(sp.off, sp.wake) : diffMin(sp.asleep, sp.wake)) : null;
     var ok = (du!=null && du>=target);
     var h = du==null?0:Math.max(3, Math.round(du/(maxDur||1)*100));
     chartBars += '<div class="b'+(du==null?" zero":(ok?" ok":""))+'" style="height:'+h+'%" title="'+d+(du==null?"（无记录）":" · "+fmtDur(du)+(ok?" ✓达标":" ✗未达标"))+'"></div>';
@@ -808,15 +857,13 @@ function renderReview(){
   var durCard = avgDur==null ? "—" : fmtDur(avgDur);
   var bedCard = avgBed==null ? "—" : fmtMin(avgBed);
   var wakeCard = avgWake==null ? "—" : fmtMin(avgWake);
-  var fallCard = avgFall==null ? "—" : fmtDur(avgFall);
 
   body.innerHTML =
     '<div class="rv-h">😴 睡眠总览 <span class="tag">'+ (g==="me"?"云云":"糯米团") +' · 记录 '+sleepDays+' 天</span></div>'
     + '<div class="rv-sum">'
-      + '<div class="rv-card hl"><div class="v">'+durCard+'</div><div class="k">平均睡眠时长</div></div>'
-      + '<div class="rv-card"><div class="v">'+bedCard+'</div><div class="k">平均就寝（上床）</div></div>'
+      + '<div class="rv-card hl"><div class="v">'+durCard+'</div><div class="k">'+(g==="me"?"平均卧床时长":"平均睡眠时长")+'</div></div>'
+      + '<div class="rv-card"><div class="v">'+bedCard+'</div><div class="k">'+(g==="me"?"平均关灯":"平均睡着")+'</div></div>'
       + '<div class="rv-card"><div class="v">'+wakeCard+'</div><div class="k">平均起床</div></div>'
-      + '<div class="rv-card"><div class="v">'+fallCard+'</div><div class="k">平均入睡耗时</div></div>'
     + '</div>'
     + '<div class="rv-card ok full"><div class="v">'+ (sleepDays? Math.round(passDays/sleepDays*100):0) +'% <small>达标</small></div><div class="k">🎯 睡眠达标 '+passDays+' / '+sleepDays+' 天 · 目标 '+(g==="me"?"7":"9")+' 小时</div></div>'
     + '<div class="rv-block">'+sleepChart+'</div>'
@@ -840,14 +887,16 @@ function renderPanel(){
   var kid= state.items.filter(function(i){return i.group==="kid";});
   $("listMe").innerHTML  = me.map(function(it){return rowHTML(it, day);}).join("");
   $("listKid").innerHTML = kid.map(function(it){return rowHTML(it, day);}).join("");
-  $("sleepMe").innerHTML  = sleepHTML("me", day.sleepMe, "😴 我的睡眠记录");
-  $("sleepKid").innerHTML = sleepHTML("kid", day.sleepKid, "🌙 孩子的睡眠记录");
-  // 今日备忘：只读展示，编辑走日历弹窗
+  $("sleepMe").innerHTML  = sleepHTML("me", day.sleepMe, "😴 我的睡眠记录（关灯 / 起床）");
+  $("sleepKid").innerHTML = sleepHTML("kid", day.sleepKid, "🌙 孩子的睡眠记录（睡着 / 起床）");
+  // 今日备忘：只读展示，编辑走日历弹窗（按当前人物）
+  var n = noteOf(day, activePerson);
   var mv = "";
-  if(day.place && day.place.trim()) mv += '<div class="mv-place">📍 '+esc(day.place)+'</div>';
-  mv += partsHTML(day);
+  if(n.place && n.place.trim()) mv += '<div class="mv-place">📍 '+esc(n.place)+'</div>';
+  mv += notesToHTML(n);
   if(!mv) mv = '<span class="empty">还没有记录，点日历上这一天添加 ✍️</span>';
   $("dayMemoView").innerHTML = mv;
+  var mt = $("memoTitle"); if(mt) mt.textContent = activePerson==="me" ? "今天做的有意义的事" : "孩子的变化";
 }
 function rowHTML(it, day){
   var rec = day.items[it.id] || {};
@@ -875,19 +924,15 @@ function rowHTML(it, day){
     + '<textarea data-notetext="'+it.id+'" placeholder="例如：跑步 3 公里 / 读了《xxx》第 2 章">'+esc(rec.note||"")+'</textarea></div>';
 }
 function sleepHTML(who, sp, title){
+  var fields = SLEEP_FIELDS[who];
   var h = '<h4><span class="dotb"></span>'+esc(title)+'</h4><div class="tgrid">';
-  SLEEP.forEach(function(f){
+  fields.forEach(function(f){
     h += '<div class="tf"><label>'+f.label+'</label><input type="time" value="'+hhmm(sp[f.id])+'" data-sleep="'+who+"."+f.id+'"></div>';
   });
   h += '</div>';
-  var fall = diffMin(sp.bed, sp.asleep);       // 上床 → 睡着
-  var dark = diffMin(sp.off, sp.asleep);       // 关灯 → 睡着
-  var dur  = diffMin(sp.asleep, sp.wake);      // 睡着 → 起床
-  h += '<div class="sleepcalc">'
-     + '<span>入睡耗时 <b>'+(fall==null?"—":fmtDur(fall))+'</b></span>'
-     + '<span>关灯后 <b>'+(dark==null?"—":fmtDur(dark))+'</b> 睡着</span>'
-     + '<span>睡眠 <b>'+(dur==null?"—":fmtDur(dur))+'</b></span>'
-     + '</div>';
+  var dur = who==="me" ? diffMin(sp.off, sp.wake) : diffMin(sp.asleep, sp.wake);
+  var lbl = who==="me" ? "卧床时长（关灯→起床）" : "睡眠时长（睡着→起床）";
+  h += '<div class="sleepcalc"><span>'+lbl+' <b>'+(dur==null?"—":fmtDur(dur))+'</b></span></div>';
   return h;
 }
 
@@ -913,7 +958,7 @@ function renderCal(){
     if(d===selDate) cls += " sel";
     if(d>tstr) cls += " future";
     var day = getDay(d,false);
-    var hasJournal = day && ((day.note && day.note.trim()) || (day.place && day.place.trim()) || (day.am && day.am.trim()) || (day.pm && day.pm.trim()) || (day.eve && day.eve.trim()));
+    var hasJournal = day && (hasNote(day.notes&&day.notes.me) || hasNote(day.notes&&day.notes.kid));
     html += '<div class="'+cls+'" data-cell="'+d+'">'
       + (hasJournal?'<span class="nmark"></span>':'')
       + '<div class="dd">'+i+'</div>'
@@ -930,14 +975,17 @@ function renderCal(){
     var day = getDay(ds,false);
     var names = state.items.filter(function(it){return itemDone(day,it);}).map(function(it){return it.name;}).join("、");
     var sp=[];
-    if(sleepDone(day.sleepMe)) sp.push("我 "+ (day.sleepMe.asleep||day.sleepMe.off||"") );
+    if(sleepDone(day.sleepMe)) sp.push("我 "+ (day.sleepMe.off||day.sleepMe.asleep||"") );
     if(sleepDone(day.sleepKid)) sp.push("娃 "+ (day.sleepKid.asleep||day.sleepKid.off||"") );
     var sm = [];
     if(names) sm.push("✅ "+names);
     if(sp.length) sm.push("😴 "+sp.join(" | "));
+    var nm=(day.notes&&day.notes.me)||{}, nk=(day.notes&&day.notes.kid)||{};
     var tx = "";
-    if(day.place && day.place.trim()) tx += '<b>📍 '+esc(day.place)+'</b> ';
-    tx += partsHTML(day);
+    if(nm.place && nm.place.trim()) tx += '<b>📍 '+esc(nm.place)+'</b> ';
+    tx += notesToHTML(nm);
+    if(nk.place && nk.place.trim()) tx += ' <b>📍 '+esc(nk.place)+'</b>';
+    tx += notesToHTML(nk);
     if(!tx.trim()) tx = '<span class="empty">（无记录）</span>';
     rows += '<div class="mlrow" data-cell="'+ds+'"><div class="dt">'+(calMonth+1)+'/'+i+'</div><div class="tx">'
       + tx
@@ -955,6 +1003,7 @@ function showTab(which){
   $("portalMe").classList.toggle("hide", which!=="me");
   $("portalKid").classList.toggle("hide", which!=="kid");
   $("portalReview").classList.toggle("hide", which!=="review");
+  if(which==="me"||which==="kid"){ activePerson=which; if(which!=="review") renderPanel(); }
   if(which==="review") renderReview();
 }
 function bindSeg(id, cb){
@@ -969,27 +1018,40 @@ function bindSeg(id, cb){
 }
 
 /* ============ 日历日记弹窗 ============ */
-function partsHTML(day){
+function notesToHTML(n){
+  if(!n) return "";
   var segs=[];
-  if(day.am && day.am.trim())  segs.push('<div class="mv-part"><b>🌤️ 上午</b><span>'+esc(day.am).replace(/\n/g,"<br>")+'</span></div>');
-  if(day.pm && day.pm.trim())  segs.push('<div class="mv-part"><b>☀️ 下午</b><span>'+esc(day.pm).replace(/\n/g,"<br>")+'</span></div>');
-  if(day.eve && day.eve.trim())segs.push('<div class="mv-part"><b>🌙 晚上</b><span>'+esc(day.eve).replace(/\n/g,"<br>")+'</span></div>');
-  if(!segs.length && day.note && day.note.trim()) segs.push('<div class="mv-part"><span>'+esc(day.note).replace(/\n/g,"<br>")+'</span></div>');
+  if(n.am && n.am.trim())  segs.push('<div class="mv-part"><b>🌤️ 上午</b><span>'+esc(n.am).replace(/\n/g,"<br>")+'</span></div>');
+  if(n.pm && n.pm.trim())  segs.push('<div class="mv-part"><b>☀️ 下午</b><span>'+esc(n.pm).replace(/\n/g,"<br>")+'</span></div>');
+  if(n.eve && n.eve.trim())segs.push('<div class="mv-part"><b>🌙 晚上</b><span>'+esc(n.eve).replace(/\n/g,"<br>")+'</span></div>');
   return segs.join("");
+}
+function setModalPerson(g){
+  modalPerson = g;
+  var box=$("dayWho");
+  if(box){ box.querySelectorAll(".sg").forEach(function(b){ b.classList.toggle("on", b.getAttribute("data-who")===g); }); }
+  var day = getDay(selDate,false) || {items:{}, sleepMe:{}, sleepKid:{}, notes:{me:{am:"",pm:"",eve:"",place:""}, kid:{am:"",pm:"",eve:"",place:""}}};
+  var n = noteOf(day, g);
+  $("dayPlace").value = n.place||"";
+  $("dayAm").value  = n.am  || "";
+  $("dayPm").value  = n.pm  || "";
+  $("dayEve").value = n.eve || "";
+  var isMe = (g==="me");
+  $("dayNoteLabel").innerHTML = isMe ? "📝 今天做的有意义的事（按时间段填）" : "👶 记录孩子的变化（按时间段填）";
+  $("dayAm").placeholder  = isMe ? "上午做了什么有意义的事…" : "上午孩子的变化…";
+  $("dayPm").placeholder  = isMe ? "下午做了什么有意义的事…" : "下午孩子的变化…";
+  $("dayEve").placeholder = isMe ? "晚上做了什么有意义的事…" : "晚上孩子的变化…";
 }
 function openDayModal(d){
   selDate = d;
-  var day = getDay(d,false) || {items:{}, sleepMe:{}, sleepKid:{}};
+  modalPerson = activePerson;
+  var day = getDay(d,false) || {items:{}, sleepMe:{}, sleepKid:{}, notes:{me:{am:"",pm:"",eve:"",place:""}, kid:{am:"",pm:"",eve:"",place:""}}};
   var dt = parseD(d);
   $("dayTitle").textContent = d.replace(/-/g,"/") + "  " + "星期"+weekdayCN(dt);
-  $("dayPlace").value = day.place||"";
-  var legacy = (!day.am && !day.pm && !day.eve && day.note) ? day.note : "";
-  $("dayAm").value  = day.am  || legacy || "";
-  $("dayPm").value  = day.pm  || "";
-  $("dayEve").value = day.eve || "";
+  setModalPerson(modalPerson);
   var items = state.items.filter(function(it){return itemDone(day,it);}).map(function(it){return it.icon+" "+it.name;});
   var s=[];
-  if(sleepDone(day.sleepMe)) s.push("😴 云云 "+ (day.sleepMe.asleep||day.sleepMe.off||"") +" 睡");
+  if(sleepDone(day.sleepMe)) s.push("😴 云云 "+ (day.sleepMe.off||day.sleepMe.asleep||"") +" 睡");
   if(sleepDone(day.sleepKid)) s.push("🌙 糯米团 "+ (day.sleepKid.asleep||day.sleepKid.off||"") +" 睡");
   var sum="";
   if(items.length) sum += items.map(function(x){return '<span class="chip">'+esc(x)+'</span>';}).join("");
@@ -1000,12 +1062,12 @@ function openDayModal(d){
 }
 function saveDayModal(){
   var day=getDay(selDate,true);
-  day.place = $("dayPlace").value.trim();
-  day.am  = $("dayAm").value;
-  day.pm  = $("dayPm").value;
-  day.eve = $("dayEve").value;
-  if(day.am.trim()||day.pm.trim()||day.eve.trim()) day.note = "";  // 已拆分到时间段，避免重复展示
-  touch(selDate); renderCal();
+  var n = noteOf(day, modalPerson);
+  n.place = $("dayPlace").value.trim();
+  n.am  = $("dayAm").value;
+  n.pm  = $("dayPm").value;
+  n.eve = $("dayEve").value;
+  touch(selDate); renderCal(); renderPanel();
   $("maskDay").classList.remove("show");
 }
 
@@ -1059,6 +1121,7 @@ function bind(){
   });
   bindSeg("rvWho", function(v){ reviewWho=v; renderReview(); });
   bindSeg("rvRange", function(v){ reviewRange=v; renderReview(); });
+  bindSeg("dayWho", setModalPerson);
   $("daySave").onclick=function(){ saveDayModal(); };
 
   $("avMe").onclick=function(){ openAv("me"); };
@@ -1124,7 +1187,7 @@ function bind(){
       var box = key[0]==="me" ? $("sleepMe") : $("sleepKid");
       var sp = d3[key[0]==="me"?"sleepMe":"sleepKid"];
       var calc = box.querySelector(".sleepcalc");
-      if(calc) calc.outerHTML = calcHTML(sp);
+      if(calc) calc.outerHTML = calcHTML(key[0], sp);
       renderStats();
       return;
     }
@@ -1158,15 +1221,10 @@ function bind(){
     m.addEventListener("click", function(e){ if(e.target===m) m.classList.remove("show"); });
   });
 }
-function calcHTML(sp){
-  var fall = diffMin(sp.bed, sp.asleep);
-  var dark = diffMin(sp.off, sp.asleep);
-  var dur  = diffMin(sp.asleep, sp.wake);
-  return '<div class="sleepcalc">'
-     + '<span>入睡耗时 <b>'+(fall==null?"—":fmtDur(fall))+'</b></span>'
-     + '<span>关灯后 <b>'+(dark==null?"—":fmtDur(dark))+'</b> 睡着</span>'
-     + '<span>睡眠 <b>'+(dur==null?"—":fmtDur(dur))+'</b></span>'
-     + '</div>';
+function calcHTML(who, sp){
+  var dur = who==="me" ? diffMin(sp.off, sp.wake) : diffMin(sp.asleep, sp.wake);
+  var lbl = who==="me" ? "卧床时长（关灯→起床）" : "睡眠时长（睡着→起床）";
+  return '<div class="sleepcalc"><span>'+lbl+' <b>'+(dur==null?"—":fmtDur(dur))+'</b></span></div>';
 }
 function findItem(id){
   for(var i=0;i<state.items.length;i++) if(state.items[i].id===id) return state.items[i];
