@@ -233,18 +233,23 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
 .memoview .mv-part span{color:#3a3f4a;white-space:pre-wrap}
 .memohint{margin-top:8px;font-size:12px;color:var(--muted);opacity:.8}
 
-/* ---------- 本月记录（整齐结构） ---------- */
-.ml-person{margin:5px 0 2px;padding:6px 8px;background:#f7f9fc;border:1px solid var(--line);border-radius:9px}
-.ml-person:first-child{margin-top:0}
-.ml-pname{font-weight:700;color:#5a6172;margin-right:8px;font-size:12.5px}
-.ml-place{display:inline-block;font-size:12.5px;color:#c47d10;font-weight:600}
-.ml-seg{display:flex;gap:8px;margin-top:3px;font-size:12.5px;line-height:1.5}
-.ml-seg .seg-t{flex:0 0 50px;color:#8a91a0;font-weight:700;white-space:nowrap}
-.ml-seg .seg-x{color:#3a3f4a;white-space:pre-wrap;flex:1;word-break:break-word}
-.ml-done{margin-top:6px;display:flex;flex-wrap:wrap;gap:6px}
-.ml-done .chip{display:inline-block;font-size:11.5px;padding:2px 8px;border-radius:20px;background:#eef0fb;color:#4a59b8;border:1px solid #dfe3f5}
-.ml-done .chip.sleep{background:#e8f6f0;color:#0e9f6e;border-color:#c7ecdc}
-.mlrow .tx .empty{color:#b9c0cc}
+/* ---------- 当天详情（点日历显示） ---------- */
+.daydetail{margin-top:12px;border-top:1px dashed var(--line);padding-top:12px}
+.daydetail .dd-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.daydetail .dd-head .dt{font-weight:700;font-size:14px}
+.daydetail .dd-head .wk{font-size:12px;color:var(--muted)}
+.daydetail .dd-edit{margin-left:auto;font-size:12px;color:#5a6fd0;border:1px solid #dfe3f5;background:#f5f7ff;padding:4px 10px;border-radius:18px;cursor:pointer}
+.dd-person{margin:6px 0;padding:9px 10px;background:#f7f9fc;border:1px solid var(--line);border-radius:10px}
+.dd-person .pp-name{font-weight:700;color:#5a6172;font-size:12.5px;margin-right:6px}
+.dd-sleep{font-size:12.5px;color:#3a3f4a;margin-top:2px}
+.dd-sleep b{color:#0f9b76}
+.dd-line{font-size:13px;line-height:1.6;color:#3a3f4a;margin-top:3px}
+.dd-line .lbl{color:#8a91a0}
+.dd-line b{color:#3a3f4a}
+.dd-seg{display:flex;gap:8px;font-size:12.5px;line-height:1.5;margin-top:2px}
+.dd-seg .st{flex:0 0 50px;color:#8a91a0;font-weight:700;white-space:nowrap}
+.dd-seg .sx{color:#3a3f4a;white-space:pre-wrap;flex:1;word-break:break-word}
+.dd-empty{color:#b9c0cc;font-size:13px;padding:4px 0}
 
 /* ---------- calendar ---------- */
 .calhead{display:flex;align-items:center;gap:10px;margin-bottom:12px}
@@ -271,12 +276,21 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:11px;align-items:center}
 .legend i{width:11px;height:11px;border-radius:4px;display:inline-block;vertical-align:-2px;margin-right:4px}
 
-.monthlist{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
-.mlrow{display:flex;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px;align-items:flex-start}
-.mlrow:last-child{border-bottom:none}
-.mlrow .dt{flex:0 0 52px;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;padding-top:1px}
-.mlrow .tx{flex:1;word-break:break-word}
-.mlrow .tx .empty{color:#b9c0cc}
+/* ---------- 整月执行矩阵 ---------- */
+.mm-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:10px}
+.mmtable{border-collapse:collapse;font-size:11px;min-width:100%}
+.mmtable th,.mmtable td{border:1px solid var(--line);padding:4px 3px;text-align:center}
+.mmtable thead th{background:#f4f6fb;color:#6b7280;font-weight:700}
+.mmtable th.rowh{position:sticky;left:0;background:#f4f6fb;white-space:nowrap;text-align:left;padding-left:8px;min-width:92px;z-index:2}
+.mmtable td.today{background:#fff4e0}
+.mmtable td.ok{background:#e8f6f0}
+.mmtable td.ok b{color:#0e9f6e}
+.mmtable td.sleep-ok{background:#e8f6f0}
+.mmtable td.sleep-ok b{color:#0e9f6e}
+.mmtable td.sleep-no{background:#fdecea}
+.mmtable td.no{color:#cdd3dd}
+.mmtable .val{font-weight:700}
+.mm-sum{font-size:11px;color:var(--muted);margin-top:6px}
 
 /* ---------- modal ---------- */
 .mask{position:fixed;inset:0;background:rgba(20,24,34,.42);z-index:100;display:none;align-items:flex-end;justify-content:center}
@@ -352,6 +366,7 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
       <button class="tab on" data-tab="me">👤 云云</button>
       <button class="tab" data-tab="kid">🧒 糯米团</button>
       <button class="tab" data-tab="review">📊 回顾</button>
+      <button class="tab" data-tab="month">📅 本月</button>
     </div>
 
     <div class="portal me" id="portalMe">
@@ -401,11 +416,15 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
       </div>
     </div>
 
-    <div class="portal memo">
-      <div class="ph"><span class="ico">📝</span><span id="memoTitle">今天做的有意义的事</span><span class="t">MEMO</span></div>
+    <div class="portal month hide" id="portalMonth">
+      <div class="ph"><span class="ico">📅</span><span>本月执行情况</span><span class="t">MONTH</span></div>
       <div class="pbody">
-        <div id="dayMemoView" class="memoview"></div>
-        <div class="memohint">点日历上对应的日期，按时间段记录（云云：有意义的事；团子：孩子的变化）</div>
+        <div class="seg" id="mmWho">
+          <button class="sg on" data-who="me">👤 云云</button>
+          <button class="sg" data-who="kid">🧒 糯米团</button>
+        </div>
+        <div class="mm-hint">看 <b id="mmMonthLabel">—</b> 每一天各方面的完成：✓=完成，数字=量化值（绿=达标），睡眠绿/红=是否达标。</div>
+        <div id="mmBody"></div>
       </div>
     </div>
   </div>
@@ -424,7 +443,7 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
       <span><i style="background:#12b981"></i>全部完成</span>
       <span><i style="background:var(--warn);border-radius:50%;width:6px;height:6px"></i>有备忘</span>
     </div>
-    <div class="monthlist" id="monthList"></div>
+    <div class="daydetail" id="dayDetail"></div>
   </div>
 
   <div class="foot">数据先存在本机，开启云同步后手机电脑实时一致 · 记得定期导出备份</div>
@@ -569,6 +588,7 @@ var selDate = todayStr();
 var calYear, calMonth;
 var activePerson = "me", modalPerson = "me";
 var reviewWho = "me", reviewRange = "1";
+var monthWho = "me";
 var syncState = "off";
 var pushTimer = null;
 
@@ -899,14 +919,6 @@ function renderPanel(){
   $("listKid").innerHTML = kid.map(function(it){return rowHTML(it, day);}).join("");
   $("sleepMe").innerHTML  = sleepHTML("me", day.sleepMe, "😴 我的睡眠记录（关灯 / 起床）");
   $("sleepKid").innerHTML = sleepHTML("kid", day.sleepKid, "🌙 孩子的睡眠记录（睡着 / 起床）");
-  // 今日备忘：只读展示，编辑走日历弹窗（按当前人物）
-  var n = noteOf(day, activePerson);
-  var mv = "";
-  if(n.place && n.place.trim()) mv += '<div class="mv-place">📍 '+esc(n.place)+'</div>';
-  mv += notesToHTML(n);
-  if(!mv) mv = '<span class="empty">还没有记录，点日历上这一天添加 ✍️</span>';
-  $("dayMemoView").innerHTML = mv;
-  var mt = $("memoTitle"); if(mt) mt.textContent = activePerson==="me" ? "今天做的有意义的事" : "孩子的变化";
 }
 function rowHTML(it, day){
   var rec = day.items[it.id] || {};
@@ -976,33 +988,101 @@ function renderCal(){
       + '</div>';
   }
   $("calGrid").innerHTML = html;
+  renderDayDetail(selDate);
+  if($("portalMonth") && !$("portalMonth").classList.contains("hide")) renderMonthMatrix();
+}
 
-  // 本月记录列表
-  var rows="";
-  for(i=1;i<=daysInMonth;i++){
-    var ds = calYear+"-"+pad(calMonth+1)+"-"+pad(i);
-    if(!dayHasAny(ds)) continue;
-    var day = getDay(ds,false);
-    var names = state.items.filter(function(it){return itemDone(day,it);}).map(function(it){return it.name;}).join("、");
-    var sp=[];
-    if(sleepDone(day.sleepMe)){ var dMe=diffMin(day.sleepMe.off, day.sleepMe.wake); sp.push("我 卧床 "+fmtDur(dMe)); }
-    if(sleepDone(day.sleepKid)){ var dKid=diffMin(day.sleepKid.asleep, day.sleepKid.wake); sp.push("娃 睡了 "+fmtDur(dKid)); }
-    var nm=(day.notes&&day.notes.me)||{}, nk=(day.notes&&day.notes.kid)||{};
-    var tx = "";
-    var meBlk = personBlock("👤 云云", nm);
-    var kidBlk = personBlock("🧒 糯米团", nk);
-    if(meBlk)  tx += meBlk;
-    if(kidBlk) tx += kidBlk;
-    if(!tx.trim()) tx = '<span class="empty">（无记录）</span>';
-    var done = "";
-    if(names) done += '<span class="chip">✅ '+esc(names)+'</span>';
-    if(sp.length) done += '<span class="chip sleep">😴 '+esc(sp.join(" · "))+'</span>';
-    rows += '<div class="mlrow" data-cell="'+ds+'"><div class="dt">'+(calMonth+1)+'/'+i+'</div><div class="tx">'
-      + tx
-      + (done? '<div class="ml-done">'+done+'</div>' : '')
-      + '</div></div>';
+/* ============ 当天详情（点日历显示） ============ */
+function renderDayDetail(d){
+  var box = $("dayDetail"); if(!box) return;
+  var dd = parseD(d), day = getDay(d,false);
+  var html = '<div class="dd-head"><span class="dt">'+(dd.getMonth()+1)+'月'+dd.getDate()+'日</span>'
+    + '<span class="wk">周'+weekdayCN(dd)+'</span>'
+    + '<button class="dd-edit" data-edit="'+d+'">✏️ 编辑这天</button></div>';
+  html += ddPersonHTML("👤 云云", day, "me");
+  html += ddPersonHTML("🧒 糯米团", day, "kid");
+  box.innerHTML = html;
+}
+function ddPersonHTML(label, day, who){
+  var items = state.items.filter(function(i){ return i.group===who; });
+  var sp = day ? (who==="me"? day.sleepMe : day.sleepKid) : null;
+  var n  = day ? (who==="me"? ((day.notes&&day.notes.me)||{}) : ((day.notes&&day.notes.kid)||{})) : {};
+  var h = '<div class="dd-person"><span class="pp-name">'+label+'</span>';
+  var has = false;
+  if(sp && sleepDone(sp)){
+    has = true;
+    var dur = who==="me" ? diffMin(sp.off, sp.wake) : diffMin(sp.asleep, sp.wake);
+    var t1  = who==="me" ? hhmm(sp.off) : hhmm(sp.asleep);
+    h += '<div class="dd-sleep">😴 '+(who==="me"?"关灯":"睡着")+' '+t1+' → 起床 '+hhmm(sp.wake)+' · <b>'+(dur==null?"—":fmtDur(dur))+'</b></div>';
   }
-  $("monthList").innerHTML = rows || '<div class="mlrow"><div class="tx"><span class="empty">本月还没有记录，点上面的日期开始打卡。</span></div></div>';
+  items.forEach(function(it){
+    var rec = day ? (day.items[it.id]||{}) : {};
+    var done = it.type==="amount" ? (rec.qty||0)>0 : !!rec.on;
+    if(done){ has = true; h += '<div class="dd-line"><span class="lbl">'+it.icon+' '+it.name+'</span>'+(it.type==="amount" ? ' <b>'+(rec.qty||0)+it.unit+'</b>' : ' ✓')+'</div>'; }
+  });
+  if(n.place && n.place.trim()){ has = true; h += '<div class="dd-line">📍 '+esc(n.place)+'</div>'; }
+  [["am","🌤️ 上午"],["pm","☀️ 下午"],["eve","🌙 晚上"]].forEach(function(s){
+    if(n[s[0]] && n[s[0]].trim()){ has = true; h += '<div class="dd-seg"><span class="st">'+s[1]+'</span><span class="sx">'+esc(n[s[0]]).replace(/\n/g,"<br>")+'</span></div>'; }
+  });
+  if(!has) h += '<div class="dd-empty">这一天还没记录</div>';
+  h += '</div>';
+  return h;
+}
+function selectDay(d){
+  if(!d) return;
+  selDate = d;
+  renderCal();    // 重新渲染日历（含选中高亮 + 当天详情）
+  renderPanel();  // 同步更新打卡面板
+}
+
+/* ============ 整月执行矩阵 ============ */
+function renderMonthMatrix(){
+  var box = $("mmBody"); if(!box) return;
+  var who = monthWho;
+  var days = new Date(calYear, calMonth+1, 0).getDate();
+  var tstr = todayStr();
+  var items = state.items.filter(function(i){ return i.group===who; });
+  $("mmMonthLabel").textContent = calYear+"年"+(calMonth+1)+"月";
+  var head = '<tr><th class="rowh">项目</th>';
+  for(var i=1;i<=days;i++){
+    var ds = calYear+"-"+pad(calMonth+1)+"-"+pad(i);
+    head += '<th'+(ds===tstr?' class="today"':'')+'>'+i+'</th>';
+  }
+  head += '</tr>';
+  var rows = "";
+  // 睡眠行
+  var sl = '<tr><td class="rowh">😴 睡眠</td>';
+  for(i=1;i<=days;i++){
+    var d = calYear+"-"+pad(calMonth+1)+"-"+pad(i);
+    var day = getDay(d,false);
+    var sp = day ? (who==="me"? day.sleepMe : day.sleepKid) : null;
+    if(sp && sleepDone(sp)){
+      var dur = who==="me" ? diffMin(sp.off, sp.wake) : diffMin(sp.asleep, sp.wake);
+      var ok = dur!=null && dur>=SLEEP_TARGET[who];
+      sl += '<td class="'+(ok?"sleep-ok":"sleep-no")+'"><b>'+(dur==null?"—":(dur/60).toFixed(1))+'</b></td>';
+    } else sl += '<td class="no">·</td>';
+  }
+  sl += '</tr>';
+  rows += sl;
+  // 各项目行
+  items.forEach(function(it){
+    var r = '<tr><td class="rowh">'+it.icon+' '+it.name+'</td>';
+    for(i=1;i<=days;i++){
+      var dd = calYear+"-"+pad(calMonth+1)+"-"+pad(i);
+      var dy = getDay(dd,false);
+      var rec = dy ? (dy.items[it.id]||{}) : {};
+      if(it.type==="amount"){
+        var q = rec.qty||0;
+        if(q>0) r += '<td class="'+(q>=it.target?"ok":"")+'"><b>'+q+'</b></td>';
+        else r += '<td class="no">·</td>';
+      } else {
+        r += (rec.on ? '<td class="ok">✓</td>' : '<td class="no">·</td>');
+      }
+    }
+    r += '</tr>';
+    rows += r;
+  });
+  box.innerHTML = '<div class="mm-scroll"><table class="mmtable"><thead>'+head+'</thead><tbody>'+rows+'</tbody></table></div>';
 }
 
 /* ============ 顶部 Tab 切换 ============ */
@@ -1013,8 +1093,10 @@ function showTab(which){
   $("portalMe").classList.toggle("hide", which!=="me");
   $("portalKid").classList.toggle("hide", which!=="kid");
   $("portalReview").classList.toggle("hide", which!=="review");
-  if(which==="me"||which==="kid"){ activePerson=which; if(which!=="review") renderPanel(); }
+  $("portalMonth").classList.toggle("hide", which!=="month");
+  if(which==="me"||which==="kid"){ activePerson=which; renderPanel(); }
   if(which==="review") renderReview();
+  if(which==="month") renderMonthMatrix();
 }
 function bindSeg(id, cb){
   var box = $(id); if(!box) return;
@@ -1135,8 +1217,8 @@ function bind(){
   $("prevDay").onclick=function(){ selDate=addDays(selDate,-1); renderAll(); };
   $("nextDay").onclick=function(){ if(selDate>=todayStr())return; selDate=addDays(selDate,1); renderAll(); };
   $("toToday").onclick=function(){ selDate=todayStr(); renderAll(); };
-  $("prevM").onclick=function(){ if(--calMonth<0){calMonth=11;calYear--;} renderCal(); renderStats(); };
-  $("nextM").onclick=function(){ if(++calMonth>11){calMonth=0;calYear++;} renderCal(); };
+  $("prevM").onclick=function(){ if(--calMonth<0){calMonth=11;calYear--;} renderCal(); renderStats(); if(!$("portalMonth").classList.contains("hide")) renderMonthMatrix(); };
+  $("nextM").onclick=function(){ if(++calMonth>11){calMonth=0;calYear++;} renderCal(); if(!$("portalMonth").classList.contains("hide")) renderMonthMatrix(); };
 
   document.querySelectorAll("#tabs .tab").forEach(function(b){
     b.onclick=function(){ showTab(b.getAttribute("data-tab")); };
@@ -1144,6 +1226,7 @@ function bind(){
   bindSeg("rvWho", function(v){ reviewWho=v; renderReview(); });
   bindSeg("rvRange", function(v){ reviewRange=v; renderReview(); });
   bindSeg("dayWho", setModalPerson);
+  bindSeg("mmWho", function(v){ monthWho=v; renderMonthMatrix(); });
   $("daySave").onclick=function(){ saveDayModal(); };
 
   $("avMe").onclick=function(){ openAv("me"); };
@@ -1159,8 +1242,11 @@ function bind(){
     var m=e.target.closest(".mask");
     if(m && e.target===m){ m.classList.remove("show"); return; }
 
+    var ed=e.target.closest("[data-edit]");
+    if(ed){ openDayModal(ed.getAttribute("data-edit")); return; }
+
     var t=e.target.closest("[data-cell]");
-    if(t){ openDayModal(t.getAttribute("data-cell")); return; }
+    if(t){ selectDay(t.getAttribute("data-cell")); return; }
 
     var c=e.target.closest("[data-chk]");
     if(c){
@@ -1185,6 +1271,11 @@ function bind(){
 
     var cl=e.target.closest("[data-close]");
     if(cl){ $(cl.getAttribute("data-close")).classList.remove("show"); }
+  });
+
+  document.addEventListener("dblclick", function(e){
+    var t=e.target.closest("[data-cell]");
+    if(t){ openDayModal(t.getAttribute("data-cell")); }
   });
 
   document.addEventListener("input", function(e){
