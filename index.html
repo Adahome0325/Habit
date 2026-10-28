@@ -231,9 +231,20 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
 .memoview .mv-part{margin-top:4px}
 .memoview .mv-part b{display:inline-block;margin-right:6px;color:#7a8290;font-weight:700}
 .memoview .mv-part span{color:#3a3f4a;white-space:pre-wrap}
-.mlrow .tx .mv-part{margin-top:2px}
-.mlrow .tx .mv-part b{display:inline-block;margin-right:6px;color:#7a8290;font-weight:700}
 .memohint{margin-top:8px;font-size:12px;color:var(--muted);opacity:.8}
+
+/* ---------- 本月记录（整齐结构） ---------- */
+.ml-person{margin:5px 0 2px;padding:6px 8px;background:#f7f9fc;border:1px solid var(--line);border-radius:9px}
+.ml-person:first-child{margin-top:0}
+.ml-pname{font-weight:700;color:#5a6172;margin-right:8px;font-size:12.5px}
+.ml-place{display:inline-block;font-size:12.5px;color:#c47d10;font-weight:600}
+.ml-seg{display:flex;gap:8px;margin-top:3px;font-size:12.5px;line-height:1.5}
+.ml-seg .seg-t{flex:0 0 50px;color:#8a91a0;font-weight:700;white-space:nowrap}
+.ml-seg .seg-x{color:#3a3f4a;white-space:pre-wrap;flex:1;word-break:break-word}
+.ml-done{margin-top:6px;display:flex;flex-wrap:wrap;gap:6px}
+.ml-done .chip{display:inline-block;font-size:11.5px;padding:2px 8px;border-radius:20px;background:#eef0fb;color:#4a59b8;border:1px solid #dfe3f5}
+.ml-done .chip.sleep{background:#e8f6f0;color:#0e9f6e;border-color:#c7ecdc}
+.mlrow .tx .empty{color:#b9c0cc}
 
 /* ---------- calendar ---------- */
 .calhead{display:flex;align-items:center;gap:10px;margin-bottom:12px}
@@ -264,9 +275,8 @@ input,textarea,select{font-family:inherit;font-size:16px;color:inherit}
 .mlrow{display:flex;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px;align-items:flex-start}
 .mlrow:last-child{border-bottom:none}
 .mlrow .dt{flex:0 0 52px;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;padding-top:1px}
-.mlrow .tx{flex:1;word-break:break-word;white-space:pre-wrap}
+.mlrow .tx{flex:1;word-break:break-word}
 .mlrow .tx .empty{color:#b9c0cc}
-.mlrow .sm{font-size:11px;color:var(--muted);margin-top:2px}
 
 /* ---------- modal ---------- */
 .mask{position:fixed;inset:0;background:rgba(20,24,34,.42);z-index:100;display:none;align-items:flex-end;justify-content:center}
@@ -977,19 +987,19 @@ function renderCal(){
     var sp=[];
     if(sleepDone(day.sleepMe)) sp.push("我 "+ (day.sleepMe.off||day.sleepMe.asleep||"") );
     if(sleepDone(day.sleepKid)) sp.push("娃 "+ (day.sleepKid.asleep||day.sleepKid.off||"") );
-    var sm = [];
-    if(names) sm.push("✅ "+names);
-    if(sp.length) sm.push("😴 "+sp.join(" | "));
     var nm=(day.notes&&day.notes.me)||{}, nk=(day.notes&&day.notes.kid)||{};
     var tx = "";
-    if(nm.place && nm.place.trim()) tx += '<b>📍 '+esc(nm.place)+'</b> ';
-    tx += notesToHTML(nm);
-    if(nk.place && nk.place.trim()) tx += ' <b>📍 '+esc(nk.place)+'</b>';
-    tx += notesToHTML(nk);
+    var meBlk = personBlock("👤 云云", nm);
+    var kidBlk = personBlock("🧒 糯米团", nk);
+    if(meBlk)  tx += meBlk;
+    if(kidBlk) tx += kidBlk;
     if(!tx.trim()) tx = '<span class="empty">（无记录）</span>';
+    var done = "";
+    if(names) done += '<span class="chip">✅ '+esc(names)+'</span>';
+    if(sp.length) done += '<span class="chip sleep">😴 '+esc(sp.join(" · "))+'</span>';
     rows += '<div class="mlrow" data-cell="'+ds+'"><div class="dt">'+(calMonth+1)+'/'+i+'</div><div class="tx">'
       + tx
-      + (sm.length? '<div class="sm">'+esc(sm.join("　"))+'</div>' : '')
+      + (done? '<div class="ml-done">'+done+'</div>' : '')
       + '</div></div>';
   }
   $("monthList").innerHTML = rows || '<div class="mlrow"><div class="tx"><span class="empty">本月还没有记录，点上面的日期开始打卡。</span></div></div>';
@@ -1025,6 +1035,18 @@ function notesToHTML(n){
   if(n.pm && n.pm.trim())  segs.push('<div class="mv-part"><b>☀️ 下午</b><span>'+esc(n.pm).replace(/\n/g,"<br>")+'</span></div>');
   if(n.eve && n.eve.trim())segs.push('<div class="mv-part"><b>🌙 晚上</b><span>'+esc(n.eve).replace(/\n/g,"<br>")+'</span></div>');
   return segs.join("");
+}
+function personBlock(label, n){
+  if(!n) return "";
+  var has = (n.place && n.place.trim()) || (n.am && n.am.trim()) || (n.pm && n.pm.trim()) || (n.eve && n.eve.trim());
+  if(!has) return "";
+  var h = '<div class="ml-person"><span class="ml-pname">'+label+'</span>';
+  if(n.place && n.place.trim()) h += '<span class="ml-place">📍 '+esc(n.place)+'</span>';
+  if(n.am && n.am.trim())  h += '<div class="ml-seg"><span class="seg-t">🌤️ 上午</span><span class="seg-x">'+esc(n.am).replace(/\n/g,"<br>")+'</span></div>';
+  if(n.pm && n.pm.trim())  h += '<div class="ml-seg"><span class="seg-t">☀️ 下午</span><span class="seg-x">'+esc(n.pm).replace(/\n/g,"<br>")+'</span></div>';
+  if(n.eve && n.eve.trim()) h += '<div class="ml-seg"><span class="seg-t">🌙 晚上</span><span class="seg-x">'+esc(n.eve).replace(/\n/g,"<br>")+'</span></div>';
+  h += '</div>';
+  return h;
 }
 function setModalPerson(g){
   modalPerson = g;
