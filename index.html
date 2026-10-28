@@ -560,7 +560,7 @@ var SLEEP_FIELDS = {
   kid: [{id:"asleep", label:"睡着时间"},
         {id:"wake",   label:"起床时间"}]
 };
-var SLEEP_TARGET = {me:420, kid:540}; // 睡眠达标阈值（分钟）：云云 7h，团子 9h
+var SLEEP_TARGET = {me:420, kid:560}; // 睡眠达标阈值（分钟）：云云 7h，团子 9小时20分
 
 /* ============ 状态 ============ */
 var state = {items:clone(DEFAULT_ITEMS), days:{}, updatedAt:0, itemsUpdatedAt:0};
@@ -858,11 +858,11 @@ function renderReview(){
     chartBars += '<div class="b'+(du==null?" zero":(ok?" ok":""))+'" style="height:'+h+'%" title="'+d+(du==null?"（无记录）":" · "+fmtDur(du)+(ok?" ✓达标":" ✗未达标"))+'"></div>';
   });
   var avgTop = (avgDur!=null && maxDur>0) ? Math.max(3, Math.round(avgDur/maxDur*100)) : 0;
-  var tgtH = target/60;
+  var tgtTxt = fmtDur(target);
   var sleepChart = '<div class="chart'+(narrow?" narrow":"")+'"><div class="bars">'+chartBars
     + '<div class="avg" style="bottom:'+(avgTop)+'%"><b>均 '+fmtDur(avgDur)+'</b></div>'
     + '</div><div class="xlab"><span>'+fromD.slice(5)+'</span><span>'+todayStr().slice(5)+'</span></div>'
-    + '<div class="rv-legend"><span><i class="g"></i>达标（≥'+tgtH+'h）</span><span><i class="b"></i>未达标</span><span>目标 '+tgtH+' 小时</span></div></div>';
+    + '<div class="rv-legend"><span><i class="g"></i>达标（≥'+tgtTxt+'）</span><span><i class="b"></i>未达标</span><span>目标 '+tgtTxt+'</span></div></div>';
 
   var durCard = avgDur==null ? "—" : fmtDur(avgDur);
   var bedCard = avgBed==null ? "—" : fmtMin(avgBed);
@@ -875,7 +875,7 @@ function renderReview(){
       + '<div class="rv-card"><div class="v">'+bedCard+'</div><div class="k">'+(g==="me"?"平均关灯":"平均睡着")+'</div></div>'
       + '<div class="rv-card"><div class="v">'+wakeCard+'</div><div class="k">平均起床</div></div>'
     + '</div>'
-    + '<div class="rv-card ok full"><div class="v">'+ (sleepDays? Math.round(passDays/sleepDays*100):0) +'% <small>达标</small></div><div class="k">🎯 睡眠达标 '+passDays+' / '+sleepDays+' 天 · 目标 '+(g==="me"?"7":"9")+' 小时</div></div>'
+    + '<div class="rv-card ok full"><div class="v">'+ (sleepDays? Math.round(passDays/sleepDays*100):0) +'% <small>达标</small></div><div class="k">🎯 睡眠达标 '+passDays+' / '+sleepDays+' 天 · 目标 '+fmtDur(SLEEP_TARGET[g])+'</div></div>'
     + '<div class="rv-block">'+sleepChart+'</div>'
     + '<div class="rv-h">📈 习惯完成情况 <span class="tag">'+ (g==="me"?"云云":"糯米团") +'</span></div>'
     + (items.length? '<div class="rv-block">'+habitRows+'</div>'
@@ -985,8 +985,8 @@ function renderCal(){
     var day = getDay(ds,false);
     var names = state.items.filter(function(it){return itemDone(day,it);}).map(function(it){return it.name;}).join("、");
     var sp=[];
-    if(sleepDone(day.sleepMe)) sp.push("我 "+ (day.sleepMe.off||day.sleepMe.asleep||"") );
-    if(sleepDone(day.sleepKid)) sp.push("娃 "+ (day.sleepKid.asleep||day.sleepKid.off||"") );
+    if(sleepDone(day.sleepMe)){ var dMe=diffMin(day.sleepMe.off, day.sleepMe.wake); sp.push("我 卧床 "+fmtDur(dMe)); }
+    if(sleepDone(day.sleepKid)){ var dKid=diffMin(day.sleepKid.asleep, day.sleepKid.wake); sp.push("娃 睡了 "+fmtDur(dKid)); }
     var nm=(day.notes&&day.notes.me)||{}, nk=(day.notes&&day.notes.kid)||{};
     var tx = "";
     var meBlk = personBlock("👤 云云", nm);
@@ -1073,8 +1073,8 @@ function openDayModal(d){
   setModalPerson(modalPerson);
   var items = state.items.filter(function(it){return itemDone(day,it);}).map(function(it){return it.icon+" "+it.name;});
   var s=[];
-  if(sleepDone(day.sleepMe)) s.push("😴 云云 "+ (day.sleepMe.off||day.sleepMe.asleep||"") +" 睡");
-  if(sleepDone(day.sleepKid)) s.push("🌙 糯米团 "+ (day.sleepKid.asleep||day.sleepKid.off||"") +" 睡");
+  if(sleepDone(day.sleepMe)) s.push("😴 云云 卧床 "+fmtDur(diffMin(day.sleepMe.off, day.sleepMe.wake)));
+  if(sleepDone(day.sleepKid)) s.push("🌙 糯米团 睡了 "+fmtDur(diffMin(day.sleepKid.asleep, day.sleepKid.wake)));
   var sum="";
   if(items.length) sum += items.map(function(x){return '<span class="chip">'+esc(x)+'</span>';}).join("");
   if(s.length) sum += s.map(function(x){return '<span class="chip">'+esc(x)+'</span>';}).join("");
